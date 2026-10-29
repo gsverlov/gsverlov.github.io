@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>App Factory - Garry Sverlov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main class="page">
+  <div class="crumb"><a href="../">Garry Sverlov</a> / App Factory</div>
+
+  <h1>App Factory</h1>
+  <p class="meta">Python, LangGraph, Claude Agent SDK, Claude Code, Docker</p>
+  <div class="links"><a href="https://github.com/gsverlov/App-factory">GitHub</a></div>
+
+  <p>App Factory takes a one-line prompt and turns it into a complete working app. It's a team of AI agents: one plans the app, several build it in parallel, and others review and check it. I started from an open-source version that often failed on bigger builds and worked on making it ship reliably.</p>
+
+  <h2>What I changed</h2>
+  <ul>
+    <li>Fixed how the orchestrator splits work across up to 6 parallel dev agents and merges what they build.</li>
+    <li>Made the orchestrator write a task-specific skill file for each dev agent at runtime, instead of giving every agent the same fixed prompt.</li>
+    <li>Added code review and security stages before an app ships.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <figure>
+    <div class="diagram-wrap"><div class="diagram"><svg id="af-svg" viewBox="0 0 980 300" role="img" aria-label="A prompt goes to an architect agent, which splits it across parallel dev agents, then code review, a security check, and a working app."></svg></div></div>
+    <p class="diagram-cap" id="af-cap"></p>
+  </figure>
+  <p>A run starts when a Linear issue is created. A LangGraph state machine moves it through spec, architecture, development, review, QA and deploy, pausing at human approval gates that notify Slack. Every agent is a Claude Code session running in Docker, and the agents share one append-only memory file per ticket instead of messaging each other.</p>
+
+  <h2>Demo</h2>
+  <div class="pair">
+    <figure class="clip w-linear">
+      <video src="../media/appfactory-linear.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Linear board as a run moves from spec to done"></video>
+      <figcaption>How a run moves through the Linear board, from spec to six dev sub-issues to done. A staged walkthrough, sped up.</figcaption>
+    </figure>
+    <figure class="clip w-gym">
+      <video src="../media/gymiq-demo.mp4" autoplay muted loop playsinline preload="metadata" aria-label="GymIQ: signing up, picking a goal, opening a lesson"></video>
+      <figcaption>GymIQ, a Duolingo-style fitness app App Factory built, running from its <a href="https://github.com/gsverlov/gymiqv6v6-duolingo-style-fitness-knowledge-app">repo</a>.</figcaption>
+    </figure>
+  </div>
+</main>
+<script src="../diagrams.js"></script>
+<script>
+  appFactoryDiagram();
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    document.querySelectorAll("video").forEach((v) => { v.removeAttribute("autoplay"); v.pause(); v.controls = true; });
+  }
+</script>
+<script>
+  // Open every page at the top, even if the browser tries to restore an old scroll position.
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.scrollTo(0, 0);
+  window.addEventListener("load", () => {
+    if (location.hash) return;
+    window.scrollTo(0, 0);
+    // In an embedded preview the outer page scrolls, so ask it to bring the top into view too.
+    const top = document.body;
+    try { top.scrollIntoView({ block: "start" }); } catch (_) {}
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ScholarshipAI - Garry Sverlov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main class="page">
+  <div class="crumb"><a href="../">Garry Sverlov</a> / ScholarshipAI</div>
+
+  <h1>ScholarshipAI</h1>
+  <p class="meta">Honorable Mention, Anthropic x UofT Hackathon. React, Node.js, TypeScript, Python, Claude API, ChromaDB</p>
+  <div class="links"><a href="https://scholarship-ai--garriksv3.replit.app/">Live site</a><a href="https://github.com/gsverlov/scholarship-hackathon">GitHub</a></div>
+
+  <p>Most scholarship searches return hundreds of listings a student doesn't qualify for, and every application wants its own essay. ScholarshipAI takes a student's profile, finds the scholarships that fit, and drafts an essay for the one they pick, built around strategies taken from past winning essays.</p>
+
+  <h2>How it works</h2>
+  <figure>
+    <div class="diagram-wrap"><div class="diagram"><svg id="sa-svg" viewBox="0 0 980 300" role="img" aria-label="Matching: profile, extract eligibility, rewrite profile, vector search keeps 15, re-rank to 5. Essay: pick a scholarship, match strategies, filter strategies, write draft."></svg></div></div>
+    <p class="diagram-cap" id="sa-cap"></p>
+  </figure>
+  <p><strong>Matching.</strong> Claude pulls eligibility facts out of the profile (GPA, degree level, field), then rewrites the profile so it searches well. The rewrite is embedded and compared against the scholarship database in ChromaDB, filtered by eligibility, keeping the 15 closest. Claude then re-ranks those and returns the top 5.</p>
+  <p><strong>Essays.</strong> Winning essays were grouped into strategy clusters ahead of time, like "overcoming adversity through family responsibility". For the chosen scholarship, Claude picks the clusters that fit it, keeps only the strategies this student's experiences can actually support, and writes a draft around one of them.</p>
+  <p>The React front end talks to a Node.js and Express server, which runs the Python matching and essay code as child processes.</p>
+
+  <h2>Demo</h2>
+  <figure class="clip">
+    <video src="../media/scholarshipai-demo.mp4" autoplay muted loop playsinline preload="metadata" aria-label="ScholarshipAI: example profile, matches, essay draft"></video>
+    <figcaption>The live version: an example profile, its matches, and an essay draft for one of them.</figcaption>
+  </figure>
+</main>
+<script src="../diagrams.js"></script>
+<script>
+  const W = 150, TOP = 46, BOT = 196;
+  flowDiagram("sa", {
+    loop: 15,
+    labels: [{ x: 20, y: 82, text: "Matching" }, { x: 20, y: 232, text: "Essay" }],
+    nodes: [
+      { id: "a1", x: 110, y: TOP, w: W, h: 64, t: "Student profile", s: "form answers", on: 0.3, off: 1.7 },
+      { id: "a2", x: 280, y: TOP, w: W, h: 64, t: "Extract eligibility", s: "Claude: GPA, level, field", on: 1.7, off: 3.1 },
+      { id: "a3", x: 450, y: TOP, w: W, h: 64, t: "Rewrite profile", s: "Claude, tuned for search", on: 3.1, off: 4.5 },
+      { id: "a4", x: 620, y: TOP, w: W, h: 64, t: "Vector search", s: "eligible, closest 15", on: 4.5, off: 6.0 },
+      { id: "a5", x: 790, y: TOP, w: W, h: 64, t: "Re-rank", s: "Claude picks top 5", on: 6.0, off: 7.6 },
+      { id: "b1", x: 790, y: BOT, w: W, h: 64, t: "Pick a scholarship", s: "one of the 5", on: 7.6, off: 9.0 },
+      { id: "b2", x: 620, y: BOT, w: W, h: 64, t: "Match strategies", s: "from winning essays", on: 9.0, off: 10.4 },
+      { id: "b3", x: 450, y: BOT, w: W, h: 64, t: "Filter strategies", s: "ones this student can use", on: 10.4, off: 11.8 },
+      { id: "b4", x: 280, y: BOT, w: W, h: 64, t: "Write draft", s: "Claude, one strategy", on: 11.8, off: 13.0 },
+      { id: "b5", x: 110, y: BOT, w: W, h: 64, t: "Essay draft", s: "ready to edit", on: 13.0 }
+    ],
+    edges: [
+      { from: "a1", to: "a2", s: 1.1, e: 1.7 }, { from: "a2", to: "a3", s: 2.5, e: 3.1 }, { from: "a3", to: "a4", s: 3.9, e: 4.5 },
+      { from: "a4", to: "a5", s: 5.4, e: 6.0 }, { from: "a5", to: "b1", s: 7.0, e: 7.6, down: true },
+      { from: "b1", to: "b2", s: 8.4, e: 9.0 }, { from: "b2", to: "b3", s: 9.8, e: 10.4 }, { from: "b3", to: "b4", s: 11.2, e: 11.8 },
+      { from: "b4", to: "b5", s: 12.4, e: 13.0 }
+    ],
+    caps: [
+      [0, "A student fills in a profile."],
+      [1.7, "Claude pulls out eligibility facts like GPA, degree level and field, then rewrites the profile so it searches well."],
+      [4.5, "The profile is embedded and searched against the scholarship database, filtered by eligibility, keeping the closest 15."],
+      [6.0, "Claude re-ranks those 15 and returns the top 5."],
+      [7.6, "The student picks one, and the essay side starts."],
+      [9.0, "Claude matches the scholarship to essay strategies mined from past winning essays, then keeps the ones this student can actually use."],
+      [11.8, "Claude writes the draft around one of those strategies."]
+    ],
+    still: "Claude pulls eligibility facts from the profile and rewrites it for search. Vector search keeps the 15 closest eligible scholarships and Claude re-ranks them to 5. For the chosen one, Claude matches essay strategies mined from winning essays, keeps the ones the student can use, and writes the draft."
+  });
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    document.querySelectorAll("video").forEach((v) => { v.removeAttribute("autoplay"); v.pause(); v.controls = true; });
+  }
+</script>
+<script>
+  // Open every page at the top, even if the browser tries to restore an old scroll position.
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.scrollTo(0, 0);
+  window.addEventListener("load", () => {
+    if (location.hash) return;
+    window.scrollTo(0, 0);
+    // In an embedded preview the outer page scrolls, so ask it to bring the top into view too.
+    const top = document.body;
+    try { top.scrollIntoView({ block: "start" }); } catch (_) {}
+  });
+</script>
+</body>
+</html>

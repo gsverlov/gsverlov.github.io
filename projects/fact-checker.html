@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fact-checker for Chrome - Garry Sverlov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main class="page">
+  <div class="crumb"><a href="../">Garry Sverlov</a> / Fact-checker for Chrome</div>
+
+  <h1>Fact-checker for Chrome</h1>
+  <p class="meta">JavaScript, Python, Claude Agent SDK, CSS Custom Highlight API</p>
+  <div class="links"><a href="https://github.com/gsverlov/factcheck-extension">GitHub</a></div>
+
+  <p>Click the extension's button on any article and it underlines the claims Claude flags as false (red) or misleading (yellow). Hover over an underline to see why it was flagged.</p>
+
+  <h2>How it works</h2>
+  <figure>
+    <div class="diagram-wrap"><div class="diagram"><svg id="fc-svg" viewBox="0 0 980 300" role="img" aria-label="Article page, Readability.js extracts the text, the service worker sends it over native messaging to a Python host that asks Claude, and flagged claims are underlined in the page."></svg></div></div>
+    <p class="diagram-cap" id="fc-cap"></p>
+  </figure>
+  <p>The interesting constraint is that a Chrome extension can't run Python. So the extension pulls the article text out with Readability.js and passes it over native messaging, Chrome's way of talking to a program on your own computer. A small Python host sends the text to Claude through the Agent SDK and gets back each problem claim as an exact quote, a rating and a short reason.</p>
+  <p>Back in the page, each quote is located in the page's text (ignoring differences in whitespace, curly quotes and dashes) and painted with the CSS Custom Highlight API, so the page's own HTML is never changed. Hovering checks which highlighted range is under the pointer and shows its reason.</p>
+
+  <h2>Demo</h2>
+  <figure class="clip">
+    <video src="../media/factcheck-demo.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Fact-checker: four claims get red and yellow underlines, hovering shows each reason"></video>
+    <figcaption>Running from its repo on a test article with planted errors.</figcaption>
+  </figure>
+</main>
+<script src="../diagrams.js"></script>
+<script>
+  flowDiagram("fc", {
+    loop: 10,
+    nodes: [
+      { id: "a", x: 120, y: 30, w: 210, t: "Article page", s: "you click the button", on: 0.2, off: 1.5 },
+      { id: "b", x: 385, y: 30, w: 210, t: "Extract the text", s: "Readability.js, injected", on: 1.5, off: 2.8 },
+      { id: "c", x: 650, y: 30, w: 210, t: "Service worker", s: "hands it off to the host", on: 2.8, off: 4.1 },
+      { id: "d", x: 650, y: 180, w: 210, t: "Native messaging", s: "Chrome to a local process", on: 4.1, off: 5.4 },
+      { id: "e", x: 385, y: 180, w: 210, t: "Python host", s: "Claude Agent SDK prompt", on: 5.4, off: 6.7 },
+      { id: "f", x: 120, y: 180, w: 210, t: "Underlined in the page", s: "red or yellow, reason on hover", on: 6.7 }
+    ],
+    edges: [
+      { from: "a", to: "b", s: 0.9, e: 1.5 }, { from: "b", to: "c", s: 2.2, e: 2.8 },
+      { from: "c", to: "d", s: 3.5, e: 4.1, down: true },
+      { from: "d", to: "e", s: 4.8, e: 5.4 }, { from: "e", to: "f", s: 6.1, e: 6.7 }
+    ],
+    caps: [
+      [0, "You open an article and click the extension's button."],
+      [1.5, "Readability.js is injected into the page and pulls out just the article text."],
+      [2.8, "The extension's service worker passes it on, because a Chrome extension can't run Python itself."],
+      [4.1, "Native messaging carries the text out of Chrome to a small Python program on your computer."],
+      [5.4, "The Python host sends the article to Claude through the Agent SDK, asking only for false or misleading claims."],
+      [6.7, "Claude returns each claim's exact quote, a red or yellow rating and a reason, and the extension underlines it in the page with the reason on hover."]
+    ],
+    still: "Readability.js pulls the article text, the service worker sends it over native messaging to a local Python host, Claude returns each false or misleading claim, and the extension underlines it in the page with the reason on hover."
+  });
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    document.querySelectorAll("video").forEach((v) => { v.removeAttribute("autoplay"); v.pause(); v.controls = true; });
+  }
+</script>
+<script>
+  // Open every page at the top, even if the browser tries to restore an old scroll position.
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.scrollTo(0, 0);
+  window.addEventListener("load", () => {
+    if (location.hash) return;
+    window.scrollTo(0, 0);
+    // In an embedded preview the outer page scrolls, so ask it to bring the top into view too.
+    const top = document.body;
+    try { top.scrollIntoView({ block: "start" }); } catch (_) {}
+  });
+</script>
+</body>
+</html>

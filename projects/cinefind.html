@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CineFind - Garry Sverlov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main class="page">
+  <div class="crumb"><a href="../">Garry Sverlov</a> / CineFind</div>
+
+  <h1>CineFind</h1>
+  <p class="meta">Team project, CSC207 (Software Design). Java, Swing, JUnit, OMDb, SerpAPI, Zyte, Nomic, Pinecone</p>
+  <div class="links"><a href="https://github.com/gsverlov/CineFind-Movie-app">GitHub</a></div>
+
+  <p>I kept struggling to find a movie to watch, so I decided to build something that would help me choose. CineFind is the result, built as a team project for CSC207.</p>
+  <p>It's a desktop app for finding something to watch. You can search movies by title, open a movie for its poster, plot, cast, genre and rating, and save favorites to an account that keeps them between sessions. The feature that sets it apart is a mood search: describe how you're feeling and the themes you want, and CineFind recommends the 10 movies that fit best.</p>
+
+  <figure class="shots">
+    <img src="../media/cinefind/home.jpg" alt="CineFind home screen with a title search box and My Favorites and Advanced Search buttons">
+    <img src="../media/cinefind/search-results.jpg" alt="Search results for Avatar, each with a poster, year and type">
+    <figcaption>The home screen, and the results of a title search.</figcaption>
+  </figure>
+
+  <h2>Mood search</h2>
+  <figure class="shots">
+    <img src="../media/cinefind/mood-search.jpg" alt="Advanced Movie Search screen with keyword and movie theme fields">
+    <img src="../media/cinefind/mood-results.jpg" alt="Mood search results including Fight Club, The Lion King, Back to the Future, Goodfellas and The Dark Knight">
+    <figcaption>The mood search form, and the movies it recommended.</figcaption>
+  </figure>
+
+  <h2>How it works</h2>
+  <figure>
+    <div class="diagram-wrap"><div class="diagram"><svg id="cf-svg" viewBox="0 0 980 300" role="img" aria-label="Mood and themes are embedded with Nomic, Pinecone finds the 10 closest movies, OMDb fills in details, and you browse results and save favorites."></svg></div></div>
+    <p class="diagram-cap" id="cf-cap"></p>
+  </figure>
+  <p><strong>Building the movie database.</strong> For each movie title, SerpAPI finds the top Google result, Zyte scrapes that page for everything relevant to the movie, and Nomic turns the text into an embedding. The embeddings are stored in a Pinecone index.</p>
+  <p><strong>Searching it.</strong> Your mood and themes are embedded the same way, and Pinecone returns the 10 movies whose embeddings are closest by cosine similarity. Each one is then looked up on OMDb for its poster, plot and rating, and turned into a Movie object for the results screen.</p>
+
+  <figure class="shots one">
+    <img src="../media/cinefind/movie-details.jpg" alt="Movie details window for Avatar with poster, year, genre, director, runtime, rating and summary">
+    <figcaption>A movie's details window. The heart in the corner adds it to your favorites.</figcaption>
+  </figure>
+
+  <h2>Design</h2>
+  <ul>
+    <li><strong>Clean Architecture.</strong> Control always flows inward: Swing panels call controllers, controllers call use-case interactors, and interactors call the API clients. The UI never talks to an API directly.</li>
+    <li><strong>SOLID.</strong> Each class has one job; for example, the advanced search controller only packages input from the UI into a request. Panels depend on controllers and controllers on interactors, not on concrete API clients.</li>
+    <li><strong>Simple factory.</strong> OMDb's JSON responses are converted into the app's own Movie objects in one place, so the rest of the program never handles raw JSON.</li>
+    <li><strong>Errors users can act on.</strong> Mistakes like mismatched passwords or a movie that isn't found raise specific exceptions and show a clear message instead of crashing the app.</li>
+    <li><strong>Saved between sessions.</strong> Usernames, passwords and each user's favorites are written to a file and loaded back on start-up.</li>
+    <li><strong>Code quality.</strong> Checkstyle and SonarQube before every pull request, code review on each PR, and JUnit tests.</li>
+  </ul>
+
+  <h2>UML</h2>
+  <figure class="uml">
+    <img src="../media/cinefind/uml-movie-details.png" alt="UML: MovieDetailsWindow uses ViewMovieDetailsInteractor, which calls OMDbApiClient, which returns a Movie">
+    <figcaption>Search and movie details: the window only talks to the interactor, and only the API client talks to OMDb.</figcaption>
+  </figure>
+  <figure class="uml wide">
+    <img src="../media/cinefind/uml-favorites.png" alt="UML: MovieDetailsWindow uses AddFavoriteInteractor, which modifies User, which stores Movie">
+    <figcaption>Favorites: the heart button in the details window goes through AddFavoriteInteractor, which updates the User.</figcaption>
+  </figure>
+
+  <h2>Code</h2>
+  <p>The mood search, from <code>AdvancedSearchInteractor</code>. Logging and some error handling are cut for length.</p>
+<pre><code>public Movie[] search(String userPreferences) {
+    // Step 1: Create embedding for user query
+    float[] userEmbedding = embeddingGenerator.embedQuery(userPreferences);
+
+    // Step 2: Query Pinecone for similar movie embeddings
+    List&lt;PineconeClient.PineconeMatch&gt; matches = pineconeClient.query(userEmbedding, 10);
+
+    // Step 3: Fetch full movie details from OMDB for each match
+    List&lt;Movie&gt; movies = new ArrayList&lt;&gt;();
+    for (PineconeClient.PineconeMatch match : matches) {
+        String title = match.metadata.optString("title", "Unknown");
+
+        // Search OMDB by title to get the movie
+        JSONObject searchJson = new JSONObject(omdbClient.searchMovies(title));
+        String imdbID = searchJson.getJSONArray("Search").getJSONObject(0).optString("imdbID");
+
+        // Fetch full details using imdbID
+        JSONObject detailsJson = omdbClient.getMovieDetails(imdbID);
+        // ... build a Movie from detailsJson and add it to movies
+
+        // Small delay to respect OMDB rate limits
+        Thread.sleep(200);
+    }
+    return movies.toArray(new Movie[0]);
+}</code></pre>
+
+  <p>Turning OMDb's JSON into the app's own <code>Movie</code> object, from <code>ViewMovieDetailsInteractor</code>. This is the simple factory: the rest of the program only ever sees a finished <code>Movie</code>.</p>
+<pre><code>public Movie getMovieDetails(String imdbID) throws Exception {
+    JSONObject json = apiClient.getMovieDetails(imdbID);
+
+    if (json == null || json.has("Error")) {
+        return null;
+    }
+
+    Movie m = new Movie(
+            json.optString("Title"),
+            json.optString("Year"),
+            json.optString("imdbID"),
+            json.optString("Type"),
+            json.optString("Poster")
+    );
+
+    m.plot = json.optString("Plot");
+    m.director = json.optString("Director");
+    m.genre = json.optString("Genre");
+    m.runtime = json.optString("Runtime");
+    m.rating = json.optString("imdbRating");
+
+    return m;
+}</code></pre>
+</main>
+<script src="../diagrams.js"></script>
+<script>
+  flowDiagram("cf", {
+    loop: 10,
+    nodes: [
+      { id: "a", x: 120, y: 30, w: 210, t: "Mood and themes", s: "what you feel like watching", on: 0.2, off: 1.5 },
+      { id: "b", x: 385, y: 30, w: 210, t: "Embed the request", s: "Nomic embedding", on: 1.5, off: 2.8 },
+      { id: "c", x: 650, y: 30, w: 210, t: "Similarity search", s: "Pinecone, 10 closest movies", on: 2.8, off: 4.1 },
+      { id: "d", x: 650, y: 180, w: 210, t: "Fill in details", s: "OMDb: poster, rating, plot", on: 4.1, off: 5.4 },
+      { id: "e", x: 385, y: 180, w: 210, t: "Results list", s: "open one for details", on: 5.4, off: 6.7 },
+      { id: "f", x: 120, y: 180, w: 210, t: "Favorites", s: "saved to your profile", on: 6.7 }
+    ],
+    edges: [
+      { from: "a", to: "b", s: 0.9, e: 1.5 }, { from: "b", to: "c", s: 2.2, e: 2.8 },
+      { from: "c", to: "d", s: 3.5, e: 4.1, down: true },
+      { from: "d", to: "e", s: 4.8, e: 5.4 }, { from: "e", to: "f", s: 6.1, e: 6.7 }
+    ],
+    caps: [
+      [0, "You describe your mood and the themes you want."],
+      [1.5, "Nomic turns that description into an embedding."],
+      [2.8, "Pinecone finds the 10 movies whose embeddings are closest to yours."],
+      [4.1, "Each title is looked up on OMDb for its poster, rating and plot."],
+      [5.4, "You browse the results and open one for its full details."],
+      [6.7, "Movies you like are saved to your profile as favorites."]
+    ],
+    still: "Your mood and themes are embedded with Nomic, Pinecone returns the 10 closest movies, OMDb fills in their details, and you browse them and save favorites to your profile."
+  });
+</script>
+<script>
+  // Open every page at the top, even if the browser tries to restore an old scroll position.
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.scrollTo(0, 0);
+  window.addEventListener("load", () => {
+    if (location.hash) return;
+    window.scrollTo(0, 0);
+    // In an embedded preview the outer page scrolls, so ask it to bring the top into view too.
+    const top = document.body;
+    try { top.scrollIntoView({ block: "start" }); } catch (_) {}
+  });
+</script>
+</body>
+</html>

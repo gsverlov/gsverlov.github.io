@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daphnia Tracking - Garry Sverlov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main class="page">
+  <div class="crumb"><a href="../">Garry Sverlov</a> / Daphnia tracking</div>
+
+  <h1>Daphnia tracking at Daphis</h1>
+  <p class="meta">Computer Vision Intern, Daphis Therapeutics, Apr - Jun 2025. Python, OpenCV, NumPy, pandas, SciPy, filterpy</p>
+
+  <p><a href="https://daphistx.com/">Daphis Therapeutics</a> is a longevity research startup that studies how compounds affect lifespan using Daphnia, tiny water fleas. Researchers dose separate tanks with different vitamins and film them, and they needed a way to turn that video into numbers they could compare. I was the only developer on that problem, and built the pipeline that does it.</p>
+
+  <figure class="clip">
+    <video src="../media/daphnia-tracking.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Tracked Daphnia in a tank, each with a colored trail, and movement metrics in the corner"></video>
+    <figcaption>The pipeline running on a real tank: every Daphnia it's following gets a colored trail, and the corner shows the count and the tank's movement metrics.</figcaption>
+  </figure>
+
+  <h2>How it works</h2>
+  <figure>
+    <div class="diagram-wrap"><div class="diagram"><svg id="dp-svg" viewBox="0 0 980 300" role="img" aria-label="Tank video, find moving animals with MOG2, split touching animals with watershed, keep identities with a Kalman filter and Hungarian matching, compute five movement metrics, write CSVs."></svg></div></div>
+    <p class="diagram-cap" id="dp-cap"></p>
+  </figure>
+  <p><strong>Finding the animals.</strong> Each video is 1280 by 1024 at 20 frames per second, with around 90 Daphnia in frame. MOG2 background subtraction picks out what's moving, a contrast filter throws away shadows, and watershed splitting separates animals that overlap or cross paths.</p>
+  <p><strong>Keeping track of who's who.</strong> A Kalman filter predicts where each animal will be next, and the Hungarian algorithm matches predictions to new detections. The matching cost adds a small penalty for size differences, so two animals passing each other don't swap identities.</p>
+  <p><strong>Turning tracks into data.</strong> I picked the five movement metrics a published Daphnia study found most predictive of longevity: body length, average speed, how much the speed varies, the share of time spent swimming fast, and where in the tank the animal stays. Everything is converted from pixels to millimetres using the tank's known size, and written out as CSVs per animal and per video.</p>
+
+  <h2>Outcome</h2>
+  <p>The movement data the pipeline produced went into the company's investor pitch, which reached the Y Combinator interview round. I also built the tuning and comparison tools used to set the pipeline's parameters, and handed it off with a rewritten README and pinned dependencies.</p>
+</main>
+<script src="../diagrams.js"></script>
+<script>
+  flowDiagram("dp", {
+    loop: 10,
+    nodes: [
+      { id: "a", x: 120, y: 30, w: 210, t: "Tank video", s: "1280×1024, 20 fps, ~90 animals", on: 0.2, off: 1.5 },
+      { id: "b", x: 385, y: 30, w: 210, t: "Find moving animals", s: "MOG2 background subtraction", on: 1.5, off: 2.8 },
+      { id: "c", x: 650, y: 30, w: 210, t: "Split touching ones", s: "watershed", on: 2.8, off: 4.1 },
+      { id: "d", x: 650, y: 180, w: 210, t: "Keep identities", s: "Kalman filter + Hungarian", on: 4.1, off: 5.4 },
+      { id: "e", x: 385, y: 180, w: 210, t: "Five movement metrics", s: "size, speed, fast swimming, depth", on: 5.4, off: 6.7 },
+      { id: "f", x: 120, y: 180, w: 210, t: "CSV files", s: "per animal and per video", on: 6.7 }
+    ],
+    edges: [
+      { from: "a", to: "b", s: 0.9, e: 1.5 }, { from: "b", to: "c", s: 2.2, e: 2.8 },
+      { from: "c", to: "d", s: 3.5, e: 4.1, down: true },
+      { from: "d", to: "e", s: 4.8, e: 5.4 }, { from: "e", to: "f", s: 6.1, e: 6.7 }
+    ],
+    caps: [
+      [0, "Each tank is filmed at 1280 by 1024, 20 frames per second, with around 90 Daphnia in view."],
+      [1.5, "MOG2 background subtraction picks out what's moving, and a contrast filter removes shadows."],
+      [2.8, "Watershed splitting separates animals that overlap or cross paths."],
+      [4.1, "A Kalman filter predicts each animal's next position, and the Hungarian algorithm matches it to the right detection."],
+      [5.4, "Each animal's track becomes five movement metrics taken from a published longevity study."],
+      [6.7, "The results are written out per animal and per video, so researchers can compare tanks dosed with different vitamins."]
+    ],
+    still: "Tank video goes through MOG2 background subtraction and watershed splitting to find each animal, a Kalman filter with Hungarian matching keeps their identities, and each track becomes five movement metrics written out as CSVs."
+  });
+</script>
+<script>
+  // Open every page at the top, even if the browser tries to restore an old scroll position.
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.scrollTo(0, 0);
+  window.addEventListener("load", () => {
+    if (location.hash) return;
+    window.scrollTo(0, 0);
+    // In an embedded preview the outer page scrolls, so ask it to bring the top into view too.
+    const top = document.body;
+    try { top.scrollIntoView({ block: "start" }); } catch (_) {}
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Preflop Poker Advisor - Garry Sverlov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main class="page">
+  <div class="crumb"><a href="../">Garry Sverlov</a> / Preflop poker advisor</div>
+
+  <h1>Preflop poker advisor</h1>
+  <p class="meta">React, TypeScript, Express, PostgreSQL</p>
+  <div class="links"><a href="https://github.com/gsverlov/PreflopPoker2">GitHub</a></div>
+
+  <p>A Texas Hold'em strategy tool for the decision before the flop. Pick your two cards, your seat and stack, and what the players before you did, and it recommends fold, call or raise with a bet size, a confidence and its reasons. It works for tables of 2 to 9 players and saves hand history to Postgres.</p>
+
+  <h2>How it works</h2>
+  <figure>
+    <div class="diagram-wrap"><div class="diagram"><svg id="pk-svg" viewBox="0 0 980 300" role="img" aria-label="Hole cards, seat and stack, and prior action feed three checks: rate the hand, group the seat, read the action. A decision tree combines them into a recommendation."></svg></div></div>
+    <p class="diagram-cap" id="pk-cap"></p>
+  </figure>
+  <p>The poker engine is written in TypeScript and runs in the browser, so the recommendation updates on every click. It places your hand in a starting-hand chart tier (premium, strong, good, marginal or weak) with a win rate and a playability score, groups your seat into early, middle, late or the blinds, and reads the action: how many players raised, how much it costs to call, and the pot odds. A decision tree combines those into the recommendation.</p>
+  <p>The hand strengths and win rates come from pre-built starting-hand charts rather than from simulating every hand, so the numbers are approximations. That was enough for what I built it for: learning the basics of preflop strategy.</p>
+
+  <h2>Demo</h2>
+  <figure class="clip">
+    <video src="../media/poker-demo.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Poker advisor: A-K suited, a raise before you, then Q-J suited"></video>
+    <figcaption>Running from its repo: A♠ K♠ on the button gets a raise, a 3 BB raise from UTG turns it into a re-raise, and Q♥ J♥ facing the same raise is a fold.</figcaption>
+  </figure>
+</main>
+<script src="../diagrams.js"></script>
+<script>
+  flowDiagram("pk", {
+    loop: 9.5,
+    nodes: [
+      { id: "i1", x: 20, y: 30, w: 160, t: "Hole cards", s: "A♠ K♠", on: 0.2, off: 1.8 },
+      { id: "i2", x: 20, y: 120, w: 160, t: "Seat and stack", s: "button, 75 BB", on: 0.2, off: 1.8 },
+      { id: "i3", x: 20, y: 210, w: 160, t: "Action before you", s: "UTG raises 3 BB", on: 0.2, off: 1.8 },
+      { id: "p1", x: 250, y: 30, w: 180, t: "Rate the hand", s: "starting-hand chart tier", on: 1.8, off: 3.6 },
+      { id: "p2", x: 250, y: 120, w: 180, t: "Group the seat", s: "early, middle, late, blinds", on: 1.8, off: 3.6 },
+      { id: "p3", x: 250, y: 210, w: 180, t: "Read the action", s: "raisers, to call, pot odds", on: 1.8, off: 3.6 },
+      { id: "d", x: 500, y: 115, w: 180, h: 70, t: "Decision tree", s: "tier × raisers × seat", on: 3.6, off: 5.2 },
+      { id: "o", x: 740, y: 80, w: 220, h: 140, on: 5.2, lines: [
+        { text: "Recommendation", cls: "muted", size: 11, gap: 34 },
+        { text: "Re-raise to 9 BB", size: 20, weight: 600, accent: true, gap: 28 },
+        { text: "Premium hand vs one raiser", cls: "muted", size: 11, gap: 20 },
+        { text: "90% confidence", cls: "muted", size: 11 }
+      ] }
+    ],
+    edges: [
+      { from: "i1", to: "p1", s: 1.2, e: 1.8 }, { from: "i2", to: "p2", s: 1.2, e: 1.8 }, { from: "i3", to: "p3", s: 1.2, e: 1.8 },
+      { from: "p1", to: "d", s: 3.0, e: 3.6 }, { from: "p2", to: "d", s: 3.0, e: 3.6 }, { from: "p3", to: "d", s: 3.0, e: 3.6 },
+      { from: "d", to: "o", s: 4.6, e: 5.2 }
+    ],
+    caps: [
+      [0, "You enter your two cards, your seat and stack, and what the players before you did."],
+      [1.8, "The engine places the hand in a starting-hand chart tier, groups your seat, and counts raisers, the amount to call and the pot odds."],
+      [3.6, "A decision tree combines hand tier, number of raisers and position."],
+      [5.2, "It returns an action, a bet size, a confidence and its reasons, recalculated in the browser on every click."]
+    ],
+    still: "Your cards, seat, stack and the action before you go through three checks (hand tier, seat group, raisers and pot odds), and a decision tree turns them into an action, bet size, confidence and reasons."
+  });
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    document.querySelectorAll("video").forEach((v) => { v.removeAttribute("autoplay"); v.pause(); v.controls = true; });
+  }
+</script>
+<script>
+  // Open every page at the top, even if the browser tries to restore an old scroll position.
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.scrollTo(0, 0);
+  window.addEventListener("load", () => {
+    if (location.hash) return;
+    window.scrollTo(0, 0);
+    // In an embedded preview the outer page scrolls, so ask it to bring the top into view too.
+    const top = document.body;
+    try { top.scrollIntoView({ block: "start" }); } catch (_) {}
+  });
+</script>
+</body>
+</html>
